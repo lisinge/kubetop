@@ -164,7 +164,7 @@ func getServices(ch chan Rows, clientset *kubernetes.Clientset) {
 			ips = append(ips, service.Spec.ClusterIP)
 		}
 		rows = append(rows, Row{
-			colorService("[service]"),
+			colorService("[svc]"),
 			colorService(service.ObjectMeta.Namespace),
 			colorService(service.ObjectMeta.Name),
 			colorService(strings.Join(statuses, ",")),
@@ -194,7 +194,7 @@ func getDeployments(ch chan Rows, clientset *kubernetes.Clientset) {
 			statuses = append(statuses, string(c.Type))
 		}
 		rows = append(rows, Row{
-			colorDeployment("[deployment]"),
+			colorDeployment("[dep]"),
 			colorDeployment(dep.ObjectMeta.Namespace),
 			colorDeployment(fmt.Sprintf("%v", dep.ObjectMeta.Name)),
 			colorDeployment(fmt.Sprintf("%d/%d/%d %s",
