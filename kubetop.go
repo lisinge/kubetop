@@ -226,7 +226,7 @@ func getPods(ch chan Rows, clientset *kubernetes.Clientset) {
 		rows = append(rows, Row{
 			colorPod("[pod]"),
 			colorPod(pod.ObjectMeta.Namespace),
-			colorPod(fmt.Sprintf("%v", truncate(pod.ObjectMeta.Name))),
+			colorPod(pod.ObjectMeta.Name),
 			colorPod(strings.Join(statuses, " ")),
 			colorPod(pod.Status.PodIP), //pod.Status.HostIP, pod.ObjectMeta.Labels),
 			colorPod(shortHumanDuration(time.Since(pod.CreationTimestamp.Time))),
