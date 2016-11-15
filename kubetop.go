@@ -197,10 +197,10 @@ func getDeployments(ch chan Rows, clientset *kubernetes.Clientset) {
 			colorDeployment("[deployment]"),
 			colorDeployment(dep.ObjectMeta.Namespace),
 			colorDeployment(fmt.Sprintf("%v", dep.ObjectMeta.Name)),
-			colorDeployment(fmt.Sprintf("DES=%d CUR=%d AVA=%d %s",
-				*dep.Spec.Replicas,
-				dep.Status.Replicas,
+			colorDeployment(fmt.Sprintf("%d/%d/%d %s",
 				dep.Status.AvailableReplicas,
+				dep.Status.Replicas,
+				*dep.Spec.Replicas,
 				strings.Join(statuses, " "),
 			)),
 			colorDeployment(""), // IP
