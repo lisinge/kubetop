@@ -223,12 +223,6 @@ func getPods(ch chan Rows, clientset *kubernetes.Clientset) {
 		}
 		var statuses []string
 		statuses = append(statuses, string(pod.Status.Phase))
-		for _, c := range pod.Status.Conditions {
-			if c.Status != "True" {
-				continue
-			}
-			statuses = append(statuses, string(c.Type))
-		}
 		rows = append(rows, Row{
 			colorPod("[pod]"),
 			colorPod(pod.ObjectMeta.Namespace),
