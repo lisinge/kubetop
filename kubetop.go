@@ -26,6 +26,7 @@ var (
 	colorService    = color.New(color.FgBlue).SprintFunc()
 	colorDeployment = color.New(color.FgMagenta).SprintFunc()
 	colorFailed     = color.New(color.FgRed).SprintFunc()
+	colorWarning    = color.New(color.FgRed).SprintFunc()
 )
 
 type (
@@ -193,16 +194,27 @@ func getDeployments(ch chan Rows, clientset *kubernetes.Clientset) {
 			}
 			statuses = append(statuses, string(c.Type))
 		}
-		rows = append(rows, Row{
-			colorDeployment("[dep]"),
-			colorDeployment(dep.ObjectMeta.Namespace),
-			colorDeployment(fmt.Sprintf("%v", dep.ObjectMeta.Name)),
-			colorDeployment(fmt.Sprintf("%d/%d/%d %s",
+		var status string
+		if dep.Status.AvailableReplicas < *dep.Spec.Replicas {
+			status = colorWarning(fmt.Sprintf("%d/%d/%d %s",
 				dep.Status.AvailableReplicas,
 				dep.Status.Replicas,
 				*dep.Spec.Replicas,
 				strings.Join(statuses, " "),
-			)),
+			))
+		} else {
+			status = colorDeployment(fmt.Sprintf("%d/%d/%d %s",
+				dep.Status.AvailableReplicas,
+				dep.Status.Replicas,
+				*dep.Spec.Replicas,
+				strings.Join(statuses, " "),
+			))
+		}
+		rows = append(rows, Row{
+			colorDeployment("[dep]"),
+			colorDeployment(dep.ObjectMeta.Namespace),
+			colorDeployment(fmt.Sprintf("%v", dep.ObjectMeta.Name)),
+			status,
 			colorDeployment(""), // IP
 			colorDeployment(shortHumanDuration(time.Since(dep.CreationTimestamp.Time))),
 		})
