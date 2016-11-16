@@ -26,7 +26,7 @@ var (
 	colorService    = color.New(color.FgBlue).SprintFunc()
 	colorDeployment = color.New(color.FgMagenta).SprintFunc()
 	colorFailed     = color.New(color.FgRed).SprintFunc()
-	colorWarning    = color.New(color.FgRed).SprintFunc()
+	colorWarning    = color.New(color.FgYellow).SprintFunc()
 )
 
 type (
@@ -87,7 +87,6 @@ func main() {
 		clear()
 		sort.Sort(rows)
 		render(Row{
-			"Type",
 			"Namespace",
 			"Name",
 			"Status",
@@ -127,7 +126,6 @@ func getNodes(ch chan Rows, clientset *kubernetes.Clientset) {
 		}
 
 		rows = append(rows, Row{
-			colorNode("[node]"),
 			colorNode(node.ObjectMeta.Namespace),
 			colorNode(node.ObjectMeta.Name),
 			colorNode(strings.Join(statuses, " ")),
@@ -165,7 +163,6 @@ func getServices(ch chan Rows, clientset *kubernetes.Clientset) {
 			ips = append(ips, service.Spec.ClusterIP)
 		}
 		rows = append(rows, Row{
-			colorService("[svc]"),
 			colorService(service.ObjectMeta.Namespace),
 			colorService(service.ObjectMeta.Name),
 			colorService(strings.Join(statuses, ",")),
@@ -196,7 +193,7 @@ func getDeployments(ch chan Rows, clientset *kubernetes.Clientset) {
 		}
 		var status string
 		if dep.Status.AvailableReplicas < *dep.Spec.Replicas {
-			status = colorWarning(fmt.Sprintf("%d/%d/%d %s",
+			status = colorFailed(fmt.Sprintf("%d/%d/%d %s",
 				dep.Status.AvailableReplicas,
 				dep.Status.Replicas,
 				*dep.Spec.Replicas,
@@ -211,7 +208,6 @@ func getDeployments(ch chan Rows, clientset *kubernetes.Clientset) {
 			))
 		}
 		rows = append(rows, Row{
-			colorDeployment("[dep]"),
 			colorDeployment(dep.ObjectMeta.Namespace),
 			colorDeployment(fmt.Sprintf("%v", dep.ObjectMeta.Name)),
 			status,
@@ -233,13 +229,16 @@ func getPods(ch chan Rows, clientset *kubernetes.Clientset) {
 		if pod.ObjectMeta.Namespace == "kube-system" {
 			continue
 		}
-		var statuses []string
-		statuses = append(statuses, string(pod.Status.Phase))
+		status := string(pod.Status.Phase)
+		if status == "Running" {
+			status = colorPod(status)
+		} else {
+			status = colorFailed(status)
+		}
 		rows = append(rows, Row{
-			colorPod("[pod]"),
 			colorPod(pod.ObjectMeta.Namespace),
 			colorPod(pod.ObjectMeta.Name),
-			colorPod(strings.Join(statuses, " ")),
+			status,
 			colorPod(pod.Status.PodIP), //pod.Status.HostIP, pod.ObjectMeta.Labels),
 			colorPod(shortHumanDuration(time.Since(pod.CreationTimestamp.Time))),
 		})
