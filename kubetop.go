@@ -63,6 +63,17 @@ func main() {
 		log.Fatal(err)
 	}
 
+	nodes, err := clientset.Core().Nodes().List(v1.ListOptions{})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	var nodeNames []string
+	for _, node := range nodes.Items {
+    nodeNames = append(nodeNames, node.ObjectMeta.Name)
+	}
+	lcpNodes := lcp(nodeNames)
+
 	var rows Rows
 	var ch chan Rows
 	for {
@@ -80,7 +91,7 @@ func main() {
 		go func() { defer wg.Done(); getNodes(ch, clientset) }()
 		go func() { defer wg.Done(); getServices(ch, clientset) }()
 		go func() { defer wg.Done(); getDeployments(ch, clientset) }()
-		go func() { defer wg.Done(); getPods(ch, clientset) }()
+		go func() { defer wg.Done(); getPods(ch, clientset, lcpNodes) }()
 		wg.Wait()
 		close(ch)
 
@@ -90,6 +101,7 @@ func main() {
 			"Namespace",
 			"Name",
 			"Status",
+			"Node",
 			"IPs",
 			"Age",
 		}, rows)
@@ -129,6 +141,7 @@ func getNodes(ch chan Rows, clientset *kubernetes.Clientset) {
 			colorNode(node.ObjectMeta.Namespace),
 			colorNode(node.ObjectMeta.Name),
 			colorNode(strings.Join(statuses, " ")),
+			colorNode(""), // Node
 			colorNode(strings.Join(addresses, " ")),
 			colorNode(shortHumanDuration(time.Since(node.CreationTimestamp.Time))),
 		})
@@ -166,6 +179,7 @@ func getServices(ch chan Rows, clientset *kubernetes.Clientset) {
 			colorService(service.ObjectMeta.Namespace),
 			colorService(service.ObjectMeta.Name),
 			colorService(strings.Join(statuses, ",")),
+			colorService(""), // Node
 			colorService(strings.Join(ips, " ") + " " + strings.Join(ports, " ")),
 			colorService(shortHumanDuration(time.Since(service.CreationTimestamp.Time))),
 		})
@@ -211,6 +225,7 @@ func getDeployments(ch chan Rows, clientset *kubernetes.Clientset) {
 			colorDeployment(dep.ObjectMeta.Namespace),
 			colorDeployment(fmt.Sprintf("%v", dep.ObjectMeta.Name)),
 			status,
+			colorDeployment(""), // Node
 			colorDeployment(""), // IP
 			colorDeployment(shortHumanDuration(time.Since(dep.CreationTimestamp.Time))),
 		})
@@ -218,7 +233,7 @@ func getDeployments(ch chan Rows, clientset *kubernetes.Clientset) {
 	ch <- rows
 }
 
-func getPods(ch chan Rows, clientset *kubernetes.Clientset) {
+func getPods(ch chan Rows, clientset *kubernetes.Clientset, lcpNodes string) {
 	pods, err := clientset.Core().Pods("").List(v1.ListOptions{})
 	if err != nil {
 		log.Fatal(err)
@@ -239,6 +254,7 @@ func getPods(ch chan Rows, clientset *kubernetes.Clientset) {
 			colorPod(pod.ObjectMeta.Namespace),
 			colorPod(pod.ObjectMeta.Name),
 			status,
+			colorPod(strings.TrimPrefix(pod.Spec.NodeName, lcpNodes)), // Node
 			colorPod(pod.Status.PodIP), //pod.Status.HostIP, pod.ObjectMeta.Labels),
 			colorPod(shortHumanDuration(time.Since(pod.CreationTimestamp.Time))),
 		})
@@ -293,6 +309,33 @@ func shortHumanDuration(d time.Duration) string {
 		return fmt.Sprintf("%dd", hours/24)
 	}
 	return fmt.Sprintf("%dy", int(d.Hours()/24/365))
+}
+
+//  LCP is copied from https://rosettacode.org/wiki/Longest_common_prefix#Go
+func lcp(l []string) string {
+	switch len(l) {
+	case 0:
+		return ""
+	case 1:
+		return l[0]
+	}
+	// LCP of min and max (lexigraphically)
+	// is the LCP of the whole set.
+	min, max := l[0], l[0]
+	for _, s := range l[1:] {
+		switch {
+		case s < min:
+			min = s
+		case s > max:
+			max = s
+		}
+	}
+	for i := 0; i < len(min) && i < len(max); i++ {
+		if min[i] != max[i] {
+			return min[:i]
+		}
+	}
+	return min
 }
 
 func clear() {
